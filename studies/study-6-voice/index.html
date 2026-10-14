@@ -1,0 +1,783 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>SONARA Study 6 Voice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Night room: a deep indigo-charcoal stage, the record in the middle, one control dock below. */
+:root {
+  --bg: #100f17; --panel: rgba(16,15,23,.92); --fg: #eeedf5; --dim: #9a98ad; --faint: #55536a; --line: rgba(255,255,255,.12);
+  --beat: 127,219,230; --bass: 183,160,255; --voice: 242,196,109;
+  --f-display: "Unbounded", "Manrope", ui-sans-serif, sans-serif;
+  --f-body: "Manrope", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; background: var(--bg); color: var(--fg); margin: 0; }
+body { font-family: var(--f-body); -webkit-font-smoothing: antialiased; overflow: hidden; }
+#stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.top { position: fixed; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 16px) 20px 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; }
+.brand b { display: block; font-family: var(--f-display); font-weight: 600; letter-spacing: .32em; font-size: 17px; }
+.brand span { font-size: 12.5px; color: var(--dim); }
+.study { font-family: var(--f-mono); font-size: 11.5px; color: var(--dim); text-align: right; letter-spacing: .04em; max-width: 50%; }
+
+.dock { position: fixed; left: 0; right: 0; bottom: 0; padding: 40px 20px calc(env(safe-area-inset-bottom, 0px) + 18px); background: linear-gradient(to top, var(--bg) 62%, rgba(16,15,23,0)); display: flex; flex-direction: column; gap: 14px; }
+.dock-in { width: 100%; max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; align-items: center; gap: 14px; }
+.song { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+.disc { width: 38px; height: 38px; border-radius: 50%; flex: none; background: radial-gradient(circle, #e9e6ff 0 22%, #1b1a26 24% 100%); box-shadow: 0 0 0 1px rgba(255,255,255,.14); }
+.song-t { min-width: 0; }
+.song-t b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-t span { font-family: var(--f-mono); font-size: 11px; color: var(--dim); }
+#step-n { color: var(--fg); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); font: 500 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); transition: color .4s, border-color .4s, background .4s; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; }
+.chip[data-state="on"] { color: rgb(var(--c)); border-color: rgba(var(--c),.45); background: rgba(var(--c),.08); }
+.chip[data-state="on"]::before { background: currentColor; }
+.chip[data-state="queued"] { color: rgb(var(--c)); animation: blink .5s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+
+#play { width: 58px; height: 58px; border-radius: 50%; border: 0; flex: none; background: var(--fg); color: var(--bg); display: grid; place-items: center; cursor: pointer; transition: transform .15s, box-shadow .3s; }
+#play:hover:not(:disabled) { transform: scale(1.06); }
+#play:disabled { opacity: .35; cursor: default; }
+#play[data-state="idle"] { box-shadow: 0 0 0 0 rgba(255,255,255,.4); animation: ping 1.8s ease-out infinite; }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(233,230,255,.45); } 100% { box-shadow: 0 0 0 18px rgba(233,230,255,0); } }
+#play svg { width: 24px; height: 24px; }
+#play .i-pause, #play .i-again { display: none; }
+#play[data-state="playing"] .i-play { display: none; } #play[data-state="playing"] .i-pause { display: block; }
+#play[data-state="done"] .i-play { display: none; } #play[data-state="done"] .i-again { display: block; }
+
+#actwrap { transition: opacity .35s ease, transform .35s cubic-bezier(.2,.8,.2,1); opacity: 0; transform: translateX(-10px); }
+#actwrap[data-show="true"] { opacity: 1; transform: none; }
+#act { --c: 255,255,255; --fill: 0; --pulse: 0; position: relative; overflow: hidden; height: 48px; padding: 0 22px; border-radius: 999px; border: 1.5px solid rgba(var(--c), calc(.4 + var(--pulse) * .6)); background: rgba(var(--c), calc(.1 + var(--pulse) * .14)); color: rgb(var(--c)); font: 700 15.5px var(--f-body); cursor: pointer; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 0 calc(var(--pulse) * 28px) rgba(var(--c), .35); white-space: nowrap; }
+#act::before { content: ""; position: absolute; inset: 0; background: rgba(var(--c), .16); transform-origin: left; transform: scaleX(var(--fill)); }
+#act > * { position: relative; }
+#act[data-state="waiting"] { cursor: default; color: var(--dim); border-color: var(--line); background: transparent; box-shadow: none; font-weight: 600; }
+#act[data-state="queued"] { cursor: default; background: rgba(var(--c), .3); color: #fff; }
+#act[data-state="ready"]:hover { background: rgba(var(--c), .3); }
+#act .plus { font-size: 20px; font-weight: 500; line-height: 0; }
+#act[data-state="waiting"] .plus, #act[data-state="queued"] .plus { display: none; }
+#hint { font-family: var(--f-mono); font-size: 11.5px; color: var(--dim); letter-spacing: .08em; text-transform: uppercase; margin-left: auto; text-align: right; }
+
+.prog { display: flex; align-items: center; gap: 12px; font-family: var(--f-mono); font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.lanes { position: relative; flex: 1; display: flex; flex-direction: column; gap: 3px; padding-block: 4px; }
+.lane { position: relative; height: 3px; border-radius: 2px; background: rgba(255,255,255,.07); }
+.lane .fill { position: absolute; top: 0; bottom: 0; left: 0; width: 0; border-radius: 2px; background: rgb(var(--c)); box-shadow: 0 0 8px rgba(var(--c), .6); }
+.lane .mark { position: absolute; top: -5px; width: 2px; height: 14px; margin-left: -1px; background: rgb(var(--c)); border-radius: 1px; box-shadow: 0 0 8px rgba(var(--c), .8); }
+.lane .mark::after { content: attr(data-l); position: absolute; bottom: 4px; left: 8px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: rgb(var(--c)); white-space: nowrap; }
+#head { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: #fff; border-radius: 1px; box-shadow: 0 0 8px rgba(255,255,255,.8); }
+
+#reset { position: fixed; right: 14px; top: calc(env(safe-area-inset-top, 0px) + 38px); background: none; border: 0; color: var(--faint); font: 500 11px var(--f-mono); letter-spacing: .06em; cursor: pointer; padding: 6px; }
+#reset:hover { color: var(--dim); }
+button:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+@media (max-width: 560px) {
+  .chips .chip { padding: 4px 7px; font-size: 10px; }
+  .song-t span + span { display: none; }
+  .row:first-child { flex-wrap: wrap; }
+  .chips { justify-content: flex-start; }
+  #act { height: 46px; padding: 0 16px; font-size: 14.5px; }
+  #hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { #play[data-state="idle"] { animation: none; } .chip[data-state="queued"] { animation: none; } }
+</style>
+<canvas id="stage" aria-hidden="true"></canvas>
+<header class="top">
+  <div class="brand"><b>SONARA</b><span>Shape the mood. Own the night.</span></div>
+  <span class="study" id="study"></span>
+</header>
+<button id="reset">↺ Reset</button>
+<section class="dock" id="dock">
+  <div class="dock-in">
+    <div class="row">
+      <div class="song"><span class="disc" aria-hidden="true"></span><span class="song-t"><b>Midnight Bloom</b><span id="step-n">Step 1</span><span> · Original track · 116 BPM</span></span></div>
+      <div class="chips" id="chips" aria-label="Layers playing"></div>
+    </div>
+    <div class="row">
+      <button id="play" aria-label="Play">
+        <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5l13 7.5-13 7.5z" fill="currentColor"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4.5" width="4" height="15" rx="1" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1" fill="currentColor"/></svg>
+        <svg class="i-again" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5M5 4v4h4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div id="actwrap" data-show="false"><button id="act" disabled><span class="plus">+</span><span id="act-label"></span></button></div>
+      <p id="hint" aria-live="polite"></p>
+    </div>
+    <div class="prog" aria-label="Song progress">
+      <span id="t-now">0:00</span>
+      <div class="lanes" id="lanes"></div>
+      <span id="t-end">0:00</span>
+    </div>
+  </div>
+</section>
+<script>window.SONARA_CONFIG = {"label": "Study 6 / 6 \u00b7 Add voice", "actions": ["beat", "bass", "perc", "strings", "voice"]};</script>
+<script>/* SONARA · Week 4 — one fixed, original song ("Midnight Bloom") built from five stems:
+   beat, bass, percussion, strings, voice. Everything is synthesized live with the Web Audio API.
+   A new stem always enters on the next beat. */
+(function () {
+  const BPM = 116, BEAT = 60 / BPM, STEP = BEAT / 4, BAR = BEAT * 4;
+  const SONG_BARS = 40, END_STEP = SONG_BARS * 16, DURATION = SONG_BARS * BAR;
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const NAMES = ['keys', 'beat', 'bass', 'perc', 'strings', 'voice'];
+
+  // Two 8-bar sections in D minor. Form: A A B A B, then a final chord.
+  const SEC = {
+    A: {
+      ch: [[62, 65, 69], [58, 62, 65], [60, 65, 69], [60, 64, 67], [62, 65, 69], [58, 62, 65], [58, 62, 67], [61, 64, 69]],
+      root: [38, 34, 41, 36, 38, 34, 31, 33],
+      mel: [
+        [[0, 69, 6], [6, 72, 2], [8, 69, 4], [12, 67, 4]], [[0, 65, 8], [10, 62, 2], [12, 65, 4]],
+        [[0, 69, 6], [6, 72, 2], [8, 74, 4], [12, 72, 4]], [[0, 67, 12], [12, 64, 4]],
+        [[0, 69, 6], [6, 72, 2], [8, 69, 4], [12, 67, 4]], [[0, 65, 6], [6, 67, 2], [8, 69, 8]],
+        [[0, 70, 6], [6, 69, 2], [8, 67, 4], [12, 65, 4]], [[0, 64, 8], [8, 61, 4], [12, 64, 4]],
+      ],
+    },
+    B: {
+      ch: [[58, 62, 65], [60, 64, 67], [60, 64, 69], [62, 65, 69], [58, 62, 67], [60, 64, 67], [60, 65, 69], [61, 64, 69]],
+      root: [34, 36, 33, 38, 31, 36, 41, 33],
+      mel: [
+        [[0, 70, 4], [4, 69, 4], [8, 65, 8]], [[0, 67, 6], [6, 69, 2], [8, 72, 8]],
+        [[0, 72, 6], [6, 69, 2], [8, 64, 8]], [[0, 65, 4], [4, 69, 4], [8, 74, 8]],
+        [[0, 74, 6], [6, 72, 2], [8, 70, 4], [12, 69, 4]], [[0, 67, 8], [8, 72, 8]],
+        [[0, 69, 4], [4, 72, 4], [8, 77, 8]], [[0, 76, 8], [8, 73, 4], [12, 76, 4]],
+      ],
+    },
+  };
+  const FORM = ['A', 'A', 'B', 'A', 'B'];
+  const VOWELS = { ah: [800, 1150, 2900], oh: [450, 800, 2830], oo: [350, 700, 2500], eh: [480, 1700, 2600] };
+  const LYRIC = ['ah', 'oh', 'ah', 'oo', 'ah', 'eh', 'oh', 'ah'];
+
+  class Song {
+    constructor() {
+      this.ctx = null; this.t0 = null; this.next = 0; this.timer = null;
+      this.layers = NAMES.map((name) => ({ name, state: 'off', enterStep: Infinity, enterTime: Infinity }));
+      this.events = []; this.evShift = 0; this.listeners = new Set(); this.prevLead = null; this.paused = false; this.finished = false;
+    }
+    on(f) { this.listeners.add(f); return () => this.listeners.delete(f); }
+    emit() { this.listeners.forEach((f) => f()); }
+    layer(n) { return this.layers[NAMES.indexOf(n)]; }
+    get started() { return this.t0 != null; }
+    now() { return this.ctx ? this.ctx.currentTime : 0; }
+    beatPhase() { return this.started ? ((((this.now() - this.t0) / BEAT) % 1) + 1) % 1 : 0; }
+    section() { if (!this.started) return 'A'; const bar = Math.floor((this.now() - this.t0) / BAR); return bar >= SONG_BARS ? 'End' : FORM[Math.floor(Math.max(0, bar) / 8)]; }
+
+    init() {
+      if (this.ctx) return;
+      const c = (this.ctx = new (window.AudioContext || window.webkitAudioContext)());
+      const nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), nd = nb.getChannelData(0);
+      for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+      this.noise = nb;
+      this.mix = c.createGain();
+      this.wake = c.createBiquadFilter(); this.wake.type = 'lowpass'; this.wake.frequency.value = 20000; this.wake.Q.value = 0.7;
+      this.glue = c.createDynamicsCompressor(); this.glue.threshold.value = -18; this.glue.ratio.value = 3; this.glue.attack.value = 0.01; this.glue.release.value = 0.15;
+      this.master = c.createGain(); this.master.gain.value = 0.75;
+      this.limiter = c.createDynamicsCompressor(); this.limiter.threshold.value = -6; this.limiter.ratio.value = 20; this.limiter.attack.value = 0.002; this.limiter.release.value = 0.15;
+      this.out = c.createAnalyser(); this.out.fftSize = 512;
+      this.mix.connect(this.wake); this.wake.connect(this.glue); this.glue.connect(this.master);
+      this.master.connect(this.limiter); this.limiter.connect(this.out); this.out.connect(c.destination);
+      const ir = c.createBuffer(2, c.sampleRate * 2.8, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+      this.rev = c.createConvolver(); this.rev.buffer = ir;
+      const revOut = c.createGain(); revOut.gain.value = 0.5; this.rev.connect(revOut); revOut.connect(this.mix);
+      this.del = c.createDelay(2); this.del.delayTime.value = STEP * 3;
+      const fb = c.createGain(); fb.gain.value = 0.36; const dlp = c.createBiquadFilter(); dlp.frequency.value = 3000;
+      this.del.connect(dlp); dlp.connect(fb); fb.connect(this.del);
+      const delOut = c.createGain(); delOut.gain.value = 0.45; dlp.connect(delOut); delOut.connect(this.mix); delOut.connect(this.rev);
+      this.bus = {}; this.an = {};
+      const trim = { keys: 2.2, beat: 0.75, bass: 0.4, perc: 0.9, strings: 1.3, voice: 1.4 };
+      NAMES.forEach((n) => {
+        const g = c.createGain(); g.gain.value = trim[n];
+        const a = c.createAnalyser(); a.fftSize = 512; a.smoothingTimeConstant = 0.7;
+        const p = c.createStereoPanner(); p.pan.value = 0;
+        g.connect(p); p.connect(this.mix); g.connect(a);
+        this.bus[n] = g; this.an[n] = a;
+      });
+      const bank = (vowel, gains) => {
+        const input = c.createGain(), fs = [];
+        VOWELS[vowel].forEach((f, k) => {
+          const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = [5, 7, 9][k];
+          const g = c.createGain(); g.gain.value = gains[k];
+          input.connect(bp); bp.connect(g); g.connect(this.bus.voice);
+          fs.push(bp);
+        });
+        return { input, fs };
+      };
+      this.choir = bank('ah', [2.2, 1.3, 0.6]);
+      this.lead = bank('ah', [3.0, 1.9, 0.9]);
+      const send = (node, rev, del) => {
+        if (rev) { const g = c.createGain(); g.gain.value = rev; node.connect(g); g.connect(this.rev); }
+        if (del) { const g = c.createGain(); g.gain.value = del; node.connect(g); g.connect(this.del); }
+      };
+      send(this.choir.input, 0.12, 0); send(this.lead.input, 0.1, 0.06);
+      // strings section: one shared warm low-pass, a little room
+      this.strIn = c.createGain();
+      const sl = c.createBiquadFilter(); sl.type = 'lowpass'; sl.frequency.value = 2400; sl.Q.value = 0.5;
+      this.strIn.connect(sl); sl.connect(this.bus.strings); send(sl, 0.35, 0);
+      this.vib = c.createOscillator(); this.vib.frequency.value = 5.4; this.vib.start();
+    }
+
+    /* ---------- instruments ---------- */
+    env(g, t, vol, a, d, hold = 0) {
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + a);
+      if (hold) { g.gain.setValueAtTime(vol, t + a + hold); g.gain.linearRampToValueAtTime(0.0001, t + a + hold + d); }
+      else g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+    }
+    osc(type, f, t, end, dest, detune = 0) {
+      const o = this.ctx.createOscillator(); o.type = type; o.frequency.value = f; o.detune.value = detune;
+      o.connect(dest); o.start(t); o.stop(end); return o;
+    }
+    noiseHit(t, dest, { type = 'highpass', f = 8000, q = 0.8, vol = 0.1, d = 0.05 }) {
+      const c = this.ctx, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+      s.buffer = this.noise; fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0005, t + d);
+      s.connect(fl); fl.connect(g); g.connect(dest); s.start(t, Math.random()); s.stop(t + d + 0.03);
+    }
+    drum(t, f0, f1, d, vol, dest) {
+      const c = this.ctx, o = c.createOscillator(), g = c.createGain();
+      o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + d * 0.6);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+      o.connect(g); g.connect(dest); o.start(t); o.stop(t + d + 0.05);
+    }
+    kick(t, vol) { this.drum(t, 155, 48, 0.42, vol, this.bus.beat); this.events.push({ k: 'kick', t, v: vol }); }
+    snare(t) {
+      const c = this.ctx, g = c.createGain();
+      this.noiseHit(t, this.bus.beat, { type: 'bandpass', f: 1700, q: 0.9, vol: 0.22, d: 0.18 });
+      this.osc('triangle', 190, t, t + 0.12, g); this.env(g, t, 0.16, 0.002, 0.1); g.connect(this.bus.beat);
+      const s = c.createGain(); s.gain.value = 0.12; g.connect(s); s.connect(this.rev);
+    }
+    pluck(t, m, vol) {
+      const c = this.ctx, g = c.createGain();
+      this.osc('triangle', mtof(m), t, t + 0.6, g); this.osc('sine', mtof(m + 12), t, t + 0.6, g);
+      this.env(g, t, vol, 0.003, 0.45); g.connect(this.bus.keys);
+      const s = c.createGain(); s.gain.value = 0.5; g.connect(s); s.connect(this.del);
+      this.events.push({ k: 'keys', t, m });
+    }
+    keyPad(t, notes, len) { // soft electric-piano chord under the arpeggio
+      const c = this.ctx;
+      notes.forEach((m) => { const g = c.createGain(); this.osc('sine', mtof(m), t, t + len + 0.8, g); this.osc('triangle', mtof(m), t, t + len + 0.8, g, 5); this.env(g, t, 0.022, 0.25, 0.6, Math.max(0.05, len - 0.25)); g.connect(this.bus.keys); });
+    }
+    bassNote(t, m, len) {
+      const c = this.ctx, f = c.createBiquadFilter(), g = c.createGain(), sub = c.createGain();
+      f.type = 'lowpass'; f.Q.value = 7; f.frequency.setValueAtTime(1900, t); f.frequency.exponentialRampToValueAtTime(240, t + 0.18);
+      const end = t + len + 0.1;
+      this.osc('sawtooth', mtof(m), t, end, f); this.osc('sawtooth', mtof(m), t, end, f, 9);
+      f.connect(g); this.env(g, t, 0.16, 0.004, 0.08, Math.max(0.02, len - 0.05));
+      this.osc('sine', mtof(m), t, end, sub); this.env(sub, t, 0.42, 0.006, 0.08, Math.max(0.02, len - 0.05));
+      g.connect(this.bus.bass); sub.connect(this.bus.bass);
+      this.events.push({ k: 'bass', t, m, len });
+    }
+    // percussion: hand drums, low toms, shaker and a wood click
+    conga(t, high, vol) { this.drum(t, high ? 340 : 230, high ? 300 : 190, 0.22, vol, this.bus.perc); this.noiseHit(t, this.bus.perc, { type: 'bandpass', f: high ? 3200 : 2200, q: 2, vol: vol * 0.25, d: 0.02 }); this.events.push({ k: 'perc', t, s: 'conga', high }); }
+    tom(t, f, vol) { this.drum(t, f, f * 0.62, 0.55, vol, this.bus.perc); const s = this.ctx.createGain(); s.gain.value = 0.2; this.bus.perc.connect(s); this.events.push({ k: 'perc', t, s: 'tom' }); }
+    // strings: a legato section, a high descant and pizzicato
+    section(t, notes, len) {
+      const c = this.ctx;
+      notes.forEach((m, i) => [-8, 8].forEach((dt) => {
+        const g = c.createGain(), vg = c.createGain();
+        const o = this.osc('sawtooth', mtof(m), t, t + len + 1, g, dt);
+        vg.gain.value = 9; this.vib.connect(vg); vg.connect(o.detune);
+        this.env(g, t, i === 0 ? 0.05 : 0.042, 0.35, 0.7, Math.max(0.05, len - 0.35));
+        g.connect(this.strIn);
+      }));
+      this.events.push({ k: 'strings', t, big: true });
+    }
+    violin(t, m, len) {
+      const c = this.ctx, g = c.createGain(), vg = c.createGain();
+      const o = this.osc('sawtooth', mtof(m), t, t + len + 0.6, g);
+      vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(14, t + 0.3); this.vib.connect(vg); vg.connect(o.detune);
+      this.env(g, t, 0.035, 0.12, 0.4, Math.max(0.05, len - 0.12));
+      g.connect(this.strIn);
+      this.events.push({ k: 'strings', t, m });
+    }
+    pizz(t, m) {
+      const g = this.ctx.createGain(), f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1800;
+      this.osc('triangle', mtof(m), t, t + 0.4, f); this.osc('sawtooth', mtof(m), t, t + 0.4, f, 4);
+      f.connect(g); this.env(g, t, 0.06, 0.002, 0.28); g.connect(this.bus.strings);
+      this.events.push({ k: 'strings', t, pz: true });
+    }
+    choirChord(t, notes, len, vowel) {
+      const c = this.ctx;
+      VOWELS[vowel].forEach((fq, k) => this.choir.fs[k].frequency.setTargetAtTime(fq, t, 0.2));
+      notes.forEach((m) => [-11, 11].forEach((dt) => {
+        const g = c.createGain();
+        this.osc('sawtooth', mtof(m), t, t + len + 0.8, g, dt);
+        this.env(g, t, 0.05, 0.45, 0.6, Math.max(0.05, len - 0.45));
+        g.connect(this.choir.input);
+      }));
+    }
+    leadNote(t, m, len, vowel) {
+      const c = this.ctx, g = c.createGain(), vg = c.createGain();
+      VOWELS[vowel].forEach((fq, k) => this.lead.fs[k].frequency.setTargetAtTime(fq, t, 0.04));
+      vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(22, t + Math.min(0.4, len));
+      this.vib.connect(vg);
+      const from = this.prevLead && t - this.prevLead.end < 0.15 ? this.prevLead.m : m;
+      [0, 7].forEach((dt) => {
+        const o = c.createOscillator(); o.type = 'sawtooth'; o.detune.value = dt;
+        o.frequency.setValueAtTime(mtof(from), t); o.frequency.exponentialRampToValueAtTime(mtof(m), t + 0.07);
+        vg.connect(o.detune); o.connect(g); o.start(t); o.stop(t + len + 0.4);
+      });
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.085, t + 0.05);
+      g.gain.setValueAtTime(0.085, t + len * 0.8); g.gain.linearRampToValueAtTime(0.0001, t + len + 0.25);
+      g.connect(this.lead.input);
+      this.prevLead = { m, end: t + len };
+      this.events.push({ k: 'voice', t, m, len });
+    }
+
+    /* ---------- the score, one 16th step at a time ---------- */
+    playStep(n, t) {
+      if (n > END_STEP) return;
+      const live = (name) => { const L = this.layer(name); return L.state !== 'off' && n >= L.enterStep; };
+      const enters = (name) => this.layer(name).enterStep === n;
+      if (n === END_STEP) { // final downbeat: one last hit and a ringing Dm chord
+        if (live('keys')) { this.pluck(t, 74, 0.08); this.keyPad(t, [62, 65, 69], 2.2); }
+        if (live('beat')) { this.kick(t, 1); this.noiseHit(t, this.rev, { f: 5000, vol: 0.12, d: 2.2 }); }
+        if (live('bass')) this.bassNote(t, 38, 1.6);
+        if (live('perc')) { this.tom(t, 110, 0.5); this.tom(t + 0.02, 75, 0.5); }
+        if (live('strings')) { this.section(t, [50, 62, 65, 69], 2.4); this.violin(t, 81, 2.2); }
+        if (live('voice')) { this.choirChord(t, [62, 65, 69], 2.2, 'ah'); this.leadNote(t, 74, 1.6, 'ah'); }
+        this.events.push({ k: 'end', t });
+        return;
+      }
+      const bar = n >> 4, i = n & 15, secName = FORM[bar >> 3], S = SEC[secName], b = bar % 8;
+      const ch = S.ch[b], r = S.root[b], isB = secName === 'B';
+      if (live('keys')) {
+        const arp = [[0, 0], [3, 1], [6, 2], [8, 1], [11, 2], [14, 0]].find(([st]) => st === i);
+        if (arp) this.pluck(t, ch[arp[1]] + 12, i === 0 ? 0.085 : 0.06);
+        if (i === 0 || enters('keys')) this.keyPad(t, ch, (16 - i) * STEP);
+      }
+      if (live('beat')) {
+        if (i % 4 === 0) this.kick(t, i === 0 || i === 8 ? 0.95 : 0.6);
+        if (i === 4 || i === 12) this.snare(t);
+        this.noiseHit(t, this.bus.beat, { f: 9000, vol: [0.05, 0.016, 0.03, 0.016][i % 4], d: 0.03 });
+        if (i % 4 === 2) this.noiseHit(t, this.bus.beat, { f: 7000, vol: isB ? 0.055 : 0.04, d: 0.16 });
+        if (b === 7 && i >= 12) this.noiseHit(t, this.bus.beat, { type: 'bandpass', f: 2400 + (i - 12) * 600, q: 2, vol: 0.06, d: 0.07 });
+      }
+      if (live('bass')) {
+        const pat = isB ? [[0, 0, 2], [2, 0, 1], [4, 12, 1], [6, 0, 2], [8, 0, 2], [10, 7, 1], [12, 12, 1], [14, 10, 2]]
+          : [[0, 0, 3], [3, 0, 1], [6, 12, 1], [8, 0, 2], [11, 7, 1], [14, 12, 2]];
+        const hit = pat.find(([st]) => st === i);
+        if (hit) this.bassNote(t, r + hit[1], hit[2] * STEP * 0.95);
+      }
+      if (live('perc')) {
+        if (i === 0 || i === 11) this.tom(t, i === 0 ? 92 : 120, 0.55);
+        if ([3, 6, 10, 13, 14].includes(i)) this.conga(t, i === 6 || i === 14, i === 6 ? 0.32 : 0.24);
+        if (i === 3 || i === 10) this.noiseHit(t, this.bus.perc, { type: 'bandpass', f: 2600, q: 6, vol: 0.12, d: 0.03 });
+        this.noiseHit(t, this.bus.perc, { f: 6000, vol: i % 2 ? 0.03 : 0.018, d: 0.05 });
+        if (b === 7 && i >= 8 && i % 2 === 0) this.tom(t, 210 - (i - 8) * 18, 0.5);
+      }
+      if (live('strings')) {
+        if (i === 0 || enters('strings')) this.section(t, [ch[0] - 12, ...ch], (16 - i) * STEP);
+        if (i === 0 || i === 8) this.violin(t, ch[i === 0 ? 2 : 1] + 12, BEAT * 1.9);
+        if ([2, 6, 10, 14].includes(i)) this.pizz(t, ch[(i >> 2) % 3]);
+      }
+      if (live('voice')) {
+        if (i === 0 || enters('voice')) this.choirChord(t, ch, (16 - i) * STEP, b % 2 ? 'oh' : 'ah');
+        S.mel[b].forEach(([st, m, len]) => { if (st === i) this.leadNote(t, m, len * STEP, LYRIC[(b + st) % 8]); });
+      }
+    }
+    tick() {
+      const now = this.ctx.currentTime;
+      while (this.t0 + this.next * STEP < now + 0.12) {
+        const t = this.t0 + this.next * STEP;
+        if (t >= now - 0.03) this.playStep(this.next, t);
+        this.next++;
+      }
+      let changed = false;
+      this.layers.forEach((L) => { if (L.state === 'queued' && now >= L.enterTime) { L.state = 'on'; changed = true; this.events.push({ k: 'enter', t: L.enterTime, name: L.name }); } });
+      if (this.events.length > 500) { const cut = this.events.findIndex((e) => e.t > now - 3); if (cut > 0) { this.events.splice(0, cut); this.evShift += cut; } }
+      if (!this.finished && now > this.t0 + DURATION + 2.6) { this.finished = true; clearInterval(this.timer); changed = true; }
+      if (changed) this.emit();
+    }
+
+    /* ---------- public actions ---------- */
+    async start(preLayers = ['keys'], { wake = true } = {}) {
+      this.init();
+      if (this.ctx.state !== 'running') { try { await this.ctx.resume(); } catch (e) { /* ignore */ } }
+      if (this.started) return;
+      const now = this.ctx.currentTime;
+      this.t0 = now + 0.08; this.next = 0;
+      preLayers.forEach((n) => Object.assign(this.layer(n), { state: 'on', enterStep: 0, enterTime: this.t0 }));
+      if (wake) {
+        this.wake.frequency.setValueAtTime(280, this.t0);
+        this.wake.frequency.exponentialRampToValueAtTime(20000, this.t0 + BEAT * 3);
+      }
+      this.timer = setInterval(() => this.tick(), 25);
+      this.tick();
+      this.emit();
+    }
+    queue(name) {
+      const L = this.layer(name);
+      if (!this.started || L.state !== 'off' || this.paused || this.finished) return null;
+      const now = this.ctx.currentTime;
+      const step = Math.ceil((now + 0.28 - this.t0) / BEAT) * 4;
+      if (step >= END_STEP) return null;
+      L.enterStep = step; L.enterTime = this.t0 + step * STEP; L.state = 'queued';
+      this.riser(now + 0.02, L.enterTime, name);
+      this.emit();
+      return L.enterTime;
+    }
+    riser(t, end, name) {
+      const c = this.ctx, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      const lo = { beat: 400, bass: 300, perc: 600, strings: 500, voice: 900 }[name] || 600;
+      s.buffer = this.noise; s.loop = true; f.type = 'bandpass'; f.Q.value = 2.5;
+      f.frequency.setValueAtTime(lo, t); f.frequency.exponentialRampToValueAtTime(lo * 9, end);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.12, end - 0.02); g.gain.linearRampToValueAtTime(0.0001, end + 0.01);
+      s.connect(f); f.connect(g); g.connect(this.mix); s.start(t); s.stop(end + 0.05);
+      if (name === 'beat') this.noiseHit(end, this.rev, { f: 4000, vol: 0.12, d: 1.4 });
+      if (name === 'bass') this.drum(end, 90, 36, 0.8, 0.5, this.bus.bass);
+      if (name === 'perc') { this.drum(end, 140, 70, 0.6, 0.5, this.bus.perc); this.noiseHit(end, this.rev, { f: 3000, vol: 0.1, d: 1.2 }); }
+      if (name === 'strings') this.noiseHit(end, this.rev, { type: 'bandpass', f: 1200, q: 0.6, vol: 0.06, d: 1.4 });
+      if (name === 'voice') this.noiseHit(end, this.rev, { f: 5000, vol: 0.06, d: 1.6 });
+    }
+    progress() { return this.started ? Math.max(0, Math.min(1, (this.now() - this.t0) / DURATION)) : 0; }
+    elapsed() { return this.started ? Math.max(0, Math.min(DURATION, this.now() - this.t0)) : 0; }
+    async pause() { if (!this.ctx || this.paused || this.finished) return; this.paused = true; this.emit(); try { await this.ctx.suspend(); } catch (e) { /* ignore */ } }
+    async resume() { if (!this.ctx || !this.paused) return; try { await this.ctx.resume(); } catch (e) { /* ignore */ } this.paused = false; this.emit(); }
+    async dispose() {
+      clearInterval(this.timer);
+      if (this.ctx) { try { this.master.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05); await new Promise((r) => setTimeout(r, 200)); await this.ctx.close(); } catch (e) { /* ignore */ } }
+      this.listeners.clear();
+    }
+  }
+  window.SonaraSong = { Song, BPM, BEAT, BAR, STEP, NAMES, DURATION, SONG_BARS };
+})();
+</script>
+<script>/* SONARA · Week 4 — one fixed song, one action at a time.
+   Play → Add bass → Add percussion → Add strings → Add voice.
+   Each layer has its own colour and its own shapes, and each reads its own audio.
+   window.SONARA_CONFIG = { label, pre: [layers that come in with Play], actions: [layers the user adds], cooldown } */
+(function () {
+  const { Song, BEAT, DURATION, NAMES } = window.SonaraSong;
+  const CFG = Object.assign({ label: '', actions: NAMES.slice(1), cooldown: 2.5 }, window.SONARA_CONFIG || {});
+  const COL = { keys: [222, 228, 255], beat: [110, 215, 235], bass: [178, 152, 255], perc: [255, 128, 110], strings: [130, 235, 170], voice: [245, 200, 105] };
+  const LABEL = { keys: 'Keys', beat: 'Beat', bass: 'Bass', perc: 'Percussion', strings: 'Strings', voice: 'Voice' };
+  const SHORT = { keys: 'Keys', beat: 'Beat', bass: 'Bass', perc: 'Perc', strings: 'Strings', voice: 'Voice' };
+  const QUEUED = { beat: 'Beat drops…', bass: 'Dropping…', perc: 'Drums incoming…', strings: 'Strings rising…', voice: 'Here it comes…' };
+  const $ = (id) => document.getElementById(id);
+  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${Math.max(0, Math.min(1, a))})`;
+  const mixC = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const startLayers = ['keys']; // Play only ever starts the soft keys intro; every other layer is added by hand
+
+  // build chips and progress lanes
+  $('chips').innerHTML = NAMES.map((n) => `<span class="chip" id="chip-${n}" style="--c:${COL[n].join(',')}">${SHORT[n]}</span>`).join('');
+  $('lanes').innerHTML = NAMES.map((n) => `<div class="lane" id="lane-${n}" style="--c:${COL[n].join(',')}"><span class="fill"></span><span class="mark" data-l="${SHORT[n]} ready" hidden></span></div>`).join('') + '<span id="head"></span>';
+
+  let song, step, unlockAt;
+
+  /* ======================= the record ======================= */
+  const cv = $('stage'), g = cv.getContext('2d');
+  let W = 0, H = 0, dpr = 1, cx = 0, cy = 0, Rp = 0;
+  function resize() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr;
+    const dock = $('dock').getBoundingClientRect().height || 200, top = 64;
+    cx = W / 2; cy = top + (H - dock - top) / 2;
+    Rp = Math.max(30, Math.min(W * 0.14, (H - dock - top) / 2 / 3.35, (W / 2 - 8) / 3.35));
+  }
+  window.addEventListener('resize', resize);
+
+  const fbuf = new Uint8Array(256), tbuf = new Uint8Array(512);
+  const lv = {}, show = {}; NAMES.forEach((n) => { lv[n] = 0; show[n] = 0; });
+  const spec = new Float32Array(72), cells = new Float32Array(16), notes = [];
+  let spin = 0, angle = 0, orbit = 0, sq = 0, rib = 0, last = performance.now() / 1000, evAbs = 0;
+  let glowCol = [150, 140, 220], squarePunch = 0, stringSwell = 0, flash = 0;
+  const ripples = [], parts = [], boxes = [];
+  const stars = Array.from({ length: 180 }, () => ({ a: Math.random() * 6.283, r: 0.15 + Math.random() * 1.25, s: 0.2 + Math.random(), p: Math.random() * 6 }));
+
+  function level(name) {
+    if (!song || !song.ctx || song.paused) return 0;
+    song.an[name].getByteFrequencyData(fbuf);
+    let s = 0; const n = name === 'bass' ? 24 : 120;
+    for (let i = 1; i < n; i++) s += fbuf[i];
+    return Math.min(1, (s / (n - 1) / 255) * (name === 'bass' ? 1.5 : 2.6));
+  }
+  function rect(x, y, w, h, rot) { g.save(); g.translate(x, y); g.rotate(rot); g.strokeRect(-w / 2, -h / 2, w, h); g.restore(); }
+  function poly(x, y, r, sides, rot) {
+    g.beginPath();
+    for (let v = 0; v <= sides; v++) { const th = rot + (v / sides) * Math.PI * 2; const X = x + Math.cos(th) * r, Y = y + Math.sin(th) * r; v ? g.lineTo(X, Y) : g.moveTo(X, Y); }
+    g.stroke();
+  }
+  function burst(x, y, c, n, spd) {
+    for (let j = 0; j < (reduced ? Math.ceil(n / 4) : n) && parts.length < 700; j++) {
+      const a = Math.random() * 6.283, sp = Rp * (0.3 + Math.random() * 1.1) * spd;
+      parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, age: 0, life: 0.9 + Math.random() * 1.3, c });
+    }
+  }
+
+  function frame() {
+    const tnow = performance.now() / 1000, dt = Math.min(0.05, tnow - last); last = tnow;
+    const running = !!(song && song.started && !song.paused && !song.finished);
+    const now = song ? song.now() : 0;
+    NAMES.forEach((n) => {
+      lv[n] = lv[n] * 0.5 + level(n) * 0.5;
+      const on = song && song.layer(n).state === 'on' && !song.finished;
+      show[n] += ((on ? 1 : 0) - show[n]) * Math.min(1, dt * (on ? 2.2 : 1.2));
+    });
+    // score events → visual hits, exactly in time with the sound
+    if (song) {
+      const ev = song.events; let i = Math.max(0, evAbs - song.evShift);
+      while (i < ev.length && ev[i].t <= now) {
+        const e = ev[i++];
+        if (now - e.t > 0.25) continue;
+        if (e.k === 'kick') ripples.push({ r0: 1.03, r1: 1.75, w: 2.4 * e.v, born: tnow, life: 0.7, a: 0.6 * e.v, c: COL.beat });
+        if (e.k === 'keys') notes.push({ born: tnow, a: ((e.m % 12) / 12) * 6.283 - Math.PI / 2, life: 1.4 });
+        if (e.k === 'bass') { squarePunch = 1; ripples.push({ r0: 1.8, r1: 2.6, w: 6, born: tnow, life: 1, a: 0.3, c: COL.bass }); }
+        if (e.k === 'perc') {
+          const cell = Math.floor((((now - song.t0) / (BEAT / 4)) % 16 + 16) % 16); cells[cell] = 1;
+          if (e.s === 'tom') boxes.push({ born: tnow, rot: Math.random() * 6.283, life: 1.1 });
+        }
+        if (e.k === 'strings') stringSwell = Math.min(1, stringSwell + (e.big ? 0.8 : e.pz ? 0.15 : 0.4));
+        if (e.k === 'enter') { flash = 1; ripples.push({ r0: 1, r1: 4.2, w: 14, born: tnow, life: 1.5, a: 0.9, c: COL[e.name] }); burst(cx, cy, COL[e.name], 70, 1.7); }
+        if (e.k === 'voice') {
+          const k = Math.floor(Math.random() * 6), ang = -orbit + (k / 6) * Math.PI * 2;
+          burst(cx + Math.cos(ang) * Rp * 2.95, cy + Math.sin(ang) * Rp * 2.95, COL.voice, 14, 1);
+        }
+        if (e.k === 'end') { flash = 1; ripples.push({ r0: 1, r1: 4.6, w: 16, born: tnow, life: 2.4, a: 0.8, c: [235, 235, 245] }); }
+      }
+      evAbs = i + song.evShift;
+    }
+    squarePunch *= Math.pow(0.02, dt); flash *= Math.pow(0.08, dt); stringSwell *= Math.pow(0.35, dt);
+    for (let c = 0; c < 16; c++) cells[c] *= Math.pow(0.05, dt);
+    let total = 0; NAMES.forEach((n) => { total += lv[n] * show[n]; }); total = Math.min(1, total * 0.55);
+    spin += ((running ? 1 : 0) - spin) * Math.min(1, dt * 1.6);
+    const k = reduced ? 0.3 : 1;
+    angle += spin * dt * 3.49 * k;
+    orbit += spin * dt * (0.14 + 0.3 * lv.voice) * k;
+    sq += spin * dt * (0.25 + 0.4 * lv.bass) * k;
+    rib += spin * dt * (0.2 + 0.3 * lv.strings) * k;
+    // the room colour follows whatever is playing
+    let target = [72, 66, 114], wsum = 0.6;
+    NAMES.forEach((n) => { const w = show[n] * (0.5 + lv[n]); target = target.map((v, i) => v + COL[n][i] * w); wsum += w; });
+    target = target.map((v) => v / wsum);
+    glowCol = mixC(glowCol, target, Math.min(1, dt * 2));
+
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    g.fillStyle = '#100f17'; g.fillRect(0, 0, W, H);
+    const halo = g.createRadialGradient(cx, cy, Rp * 0.3, cx, cy, Math.max(W, H) * 0.7);
+    halo.addColorStop(0, rgba(glowCol, 0.16 + total * 0.16 + flash * 0.22));
+    halo.addColorStop(0.5, rgba(mixC(glowCol, [30, 26, 50], 0.6), 0.1));
+    halo.addColorStop(1, 'rgba(16,15,23,0)');
+    g.fillStyle = halo; g.fillRect(0, 0, W, H);
+    for (const s of stars) {
+      const a = s.a + angle * 0.01 * s.s, r = s.r * Math.max(W, H) * 0.6;
+      g.fillStyle = `rgba(215,215,235,${0.1 + 0.14 * Math.abs(Math.sin(tnow * s.s + s.p)) + total * 0.25})`;
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.3, 1.3);
+    }
+    for (let b = 0; b < 8; b++) {
+      const r = Rp * (3.4 + b * 0.42) * (1 + (b % 2 ? 1 : -1) * lv.bass * 0.02 * show.bass);
+      g.lineWidth = Rp * (0.09 - b * 0.006); g.strokeStyle = `rgba(140,150,190,${0.07 + total * 0.05})`;
+      g.beginPath(); g.arc(cx, cy, r, 0, 6.283); g.stroke();
+    }
+    for (let b = 0; b < 5; b++) { g.strokeStyle = 'rgba(200,200,230,0.045)'; g.lineWidth = 1; g.beginPath(); g.arc(cx, cy, Rp * (1.3 + b * 0.45), 0, 6.283); g.stroke(); }
+
+    g.globalCompositeOperation = 'lighter';
+    // 1 · KEYS — each arpeggio note lights a point on a ring, placed by its pitch
+    if (show.keys > 0.01) {
+      g.strokeStyle = rgba(COL.keys, 0.12 + lv.keys * 0.3 * show.keys); g.lineWidth = 1;
+      g.beginPath(); g.arc(cx, cy, Rp * 1.22, 0, 6.283); g.stroke();
+      for (let q = notes.length - 1; q >= 0; q--) {
+        const n = notes[q], f = (tnow - n.born) / n.life;
+        if (f >= 1) { notes.splice(q, 1); continue; }
+        const a = n.a + angle * 0.02, r = Rp * (1.22 + f * 0.35);
+        g.fillStyle = rgba(COL.keys, (1 - f) * 0.9 * show.keys);
+        g.beginPath(); g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 2.5 + (1 - f) * 3, 0, 6.283); g.fill();
+        g.strokeStyle = rgba(COL.keys, (1 - f) * 0.4 * show.keys); g.lineWidth = 1.2;
+        g.beginPath(); g.arc(cx, cy, Rp * 1.22, a - 0.25 * (1 - f), a + 0.25 * (1 - f)); g.stroke();
+      }
+    }
+    // 2 · BEAT — cyan spectrum around the record, kick pulses
+    if (show.beat > 0.01 && running) {
+      song.an.beat.getByteFrequencyData(fbuf);
+      for (let i = 0; i < 72; i++) spec[i] = spec[i] * 0.5 + (fbuf[Math.floor(Math.pow(i / 72, 1.6) * 150) + 2] / 255) * 0.5;
+    }
+    if (show.beat > 0.01) {
+      g.lineCap = 'round';
+      for (let q = 0; q < 144; q++) {
+        const i = q < 72 ? q : 143 - q, a = (q / 144) * 6.283 - Math.PI / 2 + angle * 0.05, len = (3 + spec[i] * Rp * 0.38) * show.beat;
+        g.strokeStyle = rgba(COL.beat, (0.25 + spec[i] * 0.75) * show.beat); g.lineWidth = 1.7;
+        g.beginPath(); g.moveTo(cx + Math.cos(a) * Rp * 1.06, cy + Math.sin(a) * Rp * 1.06); g.lineTo(cx + Math.cos(a) * (Rp * 1.06 + len), cy + Math.sin(a) * (Rp * 1.06 + len)); g.stroke();
+      }
+    }
+    // 3 · PERCUSSION — a 16-step ring of blocks that light on each hit; toms throw out spinning squares
+    if (show.perc > 0.01) {
+      for (let c = 0; c < 16; c++) {
+        const a = (c / 16) * 6.283 - Math.PI / 2, r = Rp * 1.58, on = cells[c];
+        const w = Rp * (0.16 + on * 0.1), h = Rp * (0.08 + on * 0.14);
+        g.lineWidth = 1.6; g.strokeStyle = rgba(COL.perc, (0.4 + on * 0.6) * show.perc);
+        rect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, w, h, a + Math.PI / 2);
+        if (on > 0.3) { g.fillStyle = rgba(COL.perc, on * 0.35 * show.perc); g.save(); g.translate(cx + Math.cos(a) * r, cy + Math.sin(a) * r); g.rotate(a + Math.PI / 2); g.fillRect(-w / 2, -h / 2, w, h); g.restore(); }
+      }
+      for (let q = boxes.length - 1; q >= 0; q--) {
+        const bx = boxes[q], f = (tnow - bx.born) / bx.life;
+        if (f >= 1) { boxes.splice(q, 1); continue; }
+        const s = Rp * (1.4 + f * 2.2);
+        for (let e = 0; e < 3; e++) { g.lineWidth = 2 * (1 - f); g.strokeStyle = rgba(COL.perc, (0.55 - e * 0.15) * (1 - f) * show.perc); rect(cx, cy, s * (1 - e * 0.05), s * (1 - e * 0.05), bx.rot + f * 1.2 + e * 0.06); }
+      }
+    }
+    // 2 · BASS — lavender waveform rings and orbiting squares / rectangles that punch on every bass note
+    if (show.bass > 0.01) {
+      if (running) song.an.bass.getByteTimeDomainData(tbuf); else tbuf.fill(128);
+      for (let j = 0; j < 3; j++) {
+        const base = Rp * (1.85 + j * 0.13);
+        g.beginPath();
+        for (let p = 0; p <= 200; p++) {
+          const th = (p / 200) * 6.283 + j * 0.7 - angle * 0.1 * (j % 2 ? -1 : 1);
+          const v = (tbuf[(p * 2 + j * 37) % 512] - 128) / 128;
+          const r = base + v * Rp * (0.2 + j * 0.05) * show.bass;
+          p ? g.lineTo(cx + Math.cos(th) * r, cy + Math.sin(th) * r) : g.moveTo(cx + Math.cos(th) * r, cy + Math.sin(th) * r);
+        }
+        g.lineWidth = (1.2 + lv.bass * 3.2 - j * 0.3) * show.bass + 0.3;
+        g.strokeStyle = rgba(COL.bass, (0.3 + lv.bass * 0.6) * show.bass); g.stroke();
+      }
+      for (let i = 0; i < 4; i++) {
+        const ang = sq + (i / 4) * Math.PI * 2 + Math.PI / 4, rr = Rp * 2.25;
+        const px = cx + Math.cos(ang) * rr, py = cy + Math.sin(ang) * rr;
+        const s = Rp * (0.26 + squarePunch * 0.18 + lv.bass * 0.06) * show.bass, ratio = i % 2 ? 1.7 : 1;
+        for (let e = 0; e < (reduced ? 2 : 8); e++) {
+          g.lineWidth = 1.5; g.strokeStyle = rgba(COL.bass, (0.75 - e * 0.085) * show.bass * (0.55 + lv.bass));
+          rect(px, py, s * ratio * (1 + e * 0.08), s * (1 + e * 0.08), -sq * 1.6 + e * (0.07 + squarePunch * 0.1) + i);
+        }
+      }
+    }
+    // 4 · STRINGS — mint ribbons that swell with each bow stroke
+    if (show.strings > 0.01) {
+      for (let j = 0; j < 4; j++) {
+        const base = Rp * (2.55 + j * 0.07), lobes = 5 + j * 2;
+        g.beginPath();
+        for (let p = 0; p <= 260; p++) {
+          const th = (p / 260) * 6.283;
+          const r = base + Rp * (0.05 + lv.strings * 0.16 + stringSwell * 0.1) * show.strings * Math.sin(lobes * th + rib * (j % 2 ? -2 : 2) + j);
+          p ? g.lineTo(cx + Math.cos(th) * r, cy + Math.sin(th) * r) : g.moveTo(cx + Math.cos(th) * r, cy + Math.sin(th) * r);
+        }
+        g.closePath(); g.lineWidth = 1 + lv.strings * 1.5;
+        g.strokeStyle = rgba(COL.strings, (0.2 + lv.strings * 0.5 + stringSwell * 0.2) * show.strings); g.stroke();
+      }
+    }
+    // 5 · VOICE — gold polygons and rectangles with echo trails, a web between them, sparks on each sung note
+    if (show.voice > 0.01) {
+      const centers = [];
+      for (let i = 0; i < 6; i++) {
+        const ang = -orbit + (i / 6) * Math.PI * 2, rr = Rp * (2.95 + 0.08 * Math.sin(tnow * 0.8 + i));
+        const px = cx + Math.cos(ang) * rr, py = cy + Math.sin(ang) * rr; centers.push([px, py]);
+        const size = Rp * (0.15 + lv.voice * 0.28) * show.voice;
+        for (let e = 0; e < (reduced ? 2 : 8); e++) {
+          g.lineWidth = 1.2; g.strokeStyle = rgba(COL.voice, (0.6 - e * 0.065) * show.voice * (0.45 + lv.voice));
+          const rot = orbit * (1.4 + i * 0.2) + e * (0.09 + lv.voice * 0.12);
+          if (i % 3 === 2) rect(px, py, size * 1.7 * (1 + e * 0.06), size * 1.1 * (1 + e * 0.06), rot);
+          else poly(px, py, size * (1 + e * 0.07), i % 3 === 0 ? 3 : 5, rot);
+        }
+      }
+      g.lineWidth = 0.9; g.strokeStyle = rgba(COL.voice, show.voice * (0.08 + lv.voice * 0.35));
+      g.beginPath(); centers.forEach(([x1, y1], i) => { const [x2, y2] = centers[(i + 2) % 6]; g.moveTo(x1, y1); g.lineTo(x2, y2); }); g.stroke();
+    }
+    for (let q = parts.length - 1; q >= 0; q--) {
+      const p = parts[q]; p.age += dt;
+      if (p.age > p.life) { parts.splice(q, 1); continue; }
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.98; p.vy *= 0.98;
+      g.fillStyle = rgba(p.c, (1 - p.age / p.life) * 0.9); g.fillRect(p.x - 1.1, p.y - 1.1, 2.2, 2.2);
+    }
+    for (let q = ripples.length - 1; q >= 0; q--) {
+      const r = ripples[q], f = (tnow - r.born) / r.life;
+      if (f >= 1) { ripples.splice(q, 1); continue; }
+      const e = 1 - Math.pow(1 - f, 3);
+      g.strokeStyle = rgba(r.c, r.a * (1 - f)); g.lineWidth = r.w * (1 - f) + 0.5;
+      g.beginPath(); g.arc(cx, cy, Rp * (r.r0 + (r.r1 - r.r0) * e), 0, 6.283); g.stroke();
+    }
+
+    // the platter
+    g.globalCompositeOperation = 'source-over';
+    const R = Rp * (1 + lv.bass * 0.035 * show.bass);
+    g.fillStyle = '#16151e'; g.beginPath(); g.arc(cx, cy, R, 0, 6.283); g.fill();
+    for (let r = R * 0.48; r < R * 0.97; r += 2.6) { g.strokeStyle = 'rgba(255,255,255,0.04)'; g.lineWidth = 1; g.beginPath(); g.arc(cx, cy, r, 0, 6.283); g.stroke(); }
+    g.save(); g.translate(cx, cy); g.rotate(angle);
+    g.strokeStyle = 'rgba(255,255,255,0.07)'; g.lineWidth = R * 0.5;
+    g.beginPath(); g.arc(0, 0, R * 0.72, -0.35, 0.35); g.stroke();
+    g.beginPath(); g.arc(0, 0, R * 0.72, Math.PI - 0.35, Math.PI + 0.35); g.stroke();
+    const lab = g.createRadialGradient(0, 0, 0, 0, 0, R * 0.42);
+    lab.addColorStop(0, rgba(mixC(glowCol, [255, 255, 255], 0.35), 1)); lab.addColorStop(1, rgba(mixC(glowCol, [40, 34, 60], 0.45), 1));
+    g.fillStyle = lab; g.beginPath(); g.arc(0, 0, R * 0.42, 0, 6.283); g.fill();
+    g.fillStyle = '#100f17'; g.beginPath(); g.arc(R * 0.28, 0, R * 0.035, 0, 6.283); g.fill();
+    g.restore();
+    g.fillStyle = '#100f17'; g.beginPath(); g.arc(cx, cy, R * 0.045, 0, 6.283); g.fill();
+    g.strokeStyle = `rgba(240,240,250,${0.55 + lv.beat * 0.45})`; g.lineWidth = 2.5 + lv.beat * 2;
+    g.shadowColor = rgba(glowCol, 0.9); g.shadowBlur = 10 + total * 26;
+    g.beginPath(); g.arc(cx, cy, R, 0, 6.283); g.stroke(); g.shadowBlur = 0;
+    g.fillStyle = '#f4f4f8'; g.beginPath(); g.arc(cx + Math.cos(angle) * R * 0.82, cy + Math.sin(angle) * R * 0.82, 3, 0, 6.283); g.fill();
+
+    ui();
+    requestAnimationFrame(frame);
+  }
+
+  /* ======================= one thing at a time ======================= */
+  const current = () => CFG.actions[step];
+  const allOn = () => song && NAMES.every((n) => song.layer(n).state === 'on');
+  function ui() {
+    const started = !!(song && song.started), name = current();
+    const pb = $('play');
+    pb.dataset.state = !started ? 'idle' : song.finished ? 'done' : song.paused ? 'paused' : 'playing';
+    pb.setAttribute('aria-label', !started || song.paused ? 'Play' : song.finished ? 'Play again' : 'Pause');
+    NAMES.forEach((n) => { $('chip-' + n).dataset.state = song && !song.finished ? song.layer(n).state : 'off'; });
+    const p = started ? song.progress() : 0;
+    $('t-now').textContent = fmt(started ? song.elapsed() : 0);
+    $('head').style.left = p * 100 + '%';
+    NAMES.forEach((n) => {
+      const L = song && song.layer(n), lane = $('lane-' + n);
+      const from = L && L.state !== 'off' && started ? Math.max(0, (L.enterTime - song.t0) / DURATION) : null;
+      const fill = lane.querySelector('.fill');
+      if (from != null && p > from) { fill.style.left = from * 100 + '%'; fill.style.width = (p - from) * 100 + '%'; } else fill.style.width = '0';
+      const mk = lane.querySelector('.mark');
+      const showMark = started && name === n && L.state === 'off' && isFinite(unlockAt) && !song.finished;
+      mk.hidden = !showMark;
+      if (showMark) mk.style.left = Math.min(1, (unlockAt - song.t0) / DURATION) * 100 + '%';
+    });
+    $('step-n').textContent = started ? `Step ${Math.min(step + 2, CFG.actions.length + 1)} of ${CFG.actions.length + 1}` : `Step 1 of ${CFG.actions.length + 1}`;
+    const wrap = $('actwrap'), btn = $('act'), hint = $('hint');
+    if (!started) { wrap.dataset.show = 'false'; hint.textContent = 'Press play'; return; }
+    if (song.finished) { wrap.dataset.show = 'false'; hint.textContent = 'That’s the track · play again'; return; }
+    if (!name) { wrap.dataset.show = 'false'; hint.textContent = song.paused ? 'Paused' : allOn() ? 'Full track · enjoy' : 'Playing'; return; }
+    const L = song.layer(name), now = song.now();
+    wrap.dataset.show = 'true';
+    btn.style.setProperty('--c', COL[name].join(','));
+    if (L.state === 'off') {
+      const ready = now >= unlockAt, left = Math.max(0, unlockAt - now);
+      btn.disabled = !ready || song.paused; btn.dataset.state = ready ? 'ready' : 'waiting';
+      btn.style.setProperty('--fill', ready ? '1' : String(Math.min(1, 1 - left / CFG.cooldown)));
+      btn.style.setProperty('--pulse', ready ? String(1 - song.beatPhase()) : '0');
+      $('act-label').textContent = ready ? `Add ${LABEL[name].toLowerCase()}` : `${LABEL[name]} in ${Math.ceil(left)}`;
+      hint.textContent = song.paused ? 'Paused' : '';
+    } else if (L.state === 'queued') {
+      btn.disabled = true; btn.dataset.state = 'queued';
+      $('act-label').textContent = QUEUED[name];
+      hint.textContent = '';
+    }
+  }
+  function advance() { step++; unlockAt = song.now() + CFG.cooldown; }
+
+  async function onPlay() {
+    if (!song.started) { await song.start(startLayers, { wake: true }); unlockAt = song.now() + CFG.cooldown; return; }
+    if (song.finished) { await reset(); onPlay(); return; }
+    if (song.paused) { await song.resume(); unlockAt = Math.max(unlockAt, song.now() + 0.5); } else song.pause();
+  }
+  function onAct() {
+    const name = current();
+    if (!name || song.now() < unlockAt) return;
+    if (song.queue(name)) {
+      const off = song.on(() => { if (song.layer(name).state === 'on') { off(); advance(); } });
+    }
+  }
+  async function reset() { const old = song; song = null; if (old) await old.dispose(); boot(); }
+  function boot() { song = new Song(); step = 0; unlockAt = Infinity; evAbs = 0; ripples.length = 0; parts.length = 0; boxes.length = 0; notes.length = 0; }
+
+  $('play').addEventListener('click', onPlay);
+  $('act').addEventListener('click', onAct);
+  $('reset').addEventListener('click', reset);
+  $('study').textContent = CFG.label;
+  $('t-end').textContent = fmt(DURATION);
+  boot(); resize(); requestAnimationFrame(frame);
+  window.__sonara = () => song;
+})();
+</script>
+
+</body></html>

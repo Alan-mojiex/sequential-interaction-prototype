@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SONARA · Build the track</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/sonara.css">
+</head>
+<body>
+<canvas id="stage" aria-hidden="true"></canvas>
+<header class="top">
+  <div class="brand"><b>SONARA</b><span>Shape the mood. Own the night.</span></div>
+  <span class="study" id="study"></span>
+</header>
+<button id="reset">↺ Reset</button>
+<section class="dock" id="dock">
+  <div class="dock-in">
+    <div class="row">
+      <div class="song"><span class="disc" aria-hidden="true"></span><span class="song-t"><b>Midnight Bloom</b><span id="step-n">Step 1</span><span> · Original track · 116 BPM</span></span></div>
+      <div class="chips" id="chips" aria-label="Layers playing"></div>
+    </div>
+    <div class="row">
+      <button id="play" aria-label="Play">
+        <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5l13 7.5-13 7.5z" fill="currentColor"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4.5" width="4" height="15" rx="1" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1" fill="currentColor"/></svg>
+        <svg class="i-again" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5M5 4v4h4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div id="actwrap" data-show="false"><button id="act" disabled><span class="plus">+</span><span id="act-label"></span></button></div>
+      <p id="hint" aria-live="polite"></p>
+    </div>
+    <div class="prog" aria-label="Song progress">
+      <span id="t-now">0:00</span>
+      <div class="lanes" id="lanes"></div>
+      <span id="t-end">0:00</span>
+    </div>
+  </div>
+</section>
+<section class="end" id="end" role="dialog" aria-labelledby="end-t" hidden>
+  <div class="end-in">
+    <p class="end-k">Full track · 6 of 6 layers</p>
+    <h1 id="end-t">You built Midnight Bloom</h1>
+    <p class="end-s">Keys, beat, bass, percussion, strings and voice, one layer at a time.</p>
+    <button id="again">↺ Start over</button>
+  </div>
+</section>
+<script>window.SONARA_CONFIG = {"label": "Build the track", "actions": ["beat", "bass", "perc", "strings", "voice"]};</script>
+<script src="js/engine.js"></script>
+<script src="js/sequence.js"></script>
+</body>
+</html>
